@@ -214,8 +214,10 @@ let resultsFilter = 'ALL';
 function defaultState(){
   return {
     config: {
-      name: 'SAHODAYA FOOTBALL TOURNAMENT',
-      tagline: '47th EDITION 2026-27 ',
+      name: 'My Local Tournament',
+      heroLine1: 'LOCAL FOOTBALL',
+      heroLine2: 'MY TOURNAMENT',
+      heroLine3: 'LOCAL FOOTBALL TOURNAMENT',
       dateRange: '',
       passcode: '1234',
       nextMatchNumber: 1,
@@ -366,9 +368,9 @@ function renderHome(){
     <div class="hero">
       <div class="eyebrow" id="dateRangeWrap">${selectedCategory} DIVISION ${state.config.dateRange? ' &middot; '+escapeHtml(state.config.dateRange) : ''}</div>
       <div class="headline">
-        <span class="l1">LOCAL FOOTBALL</span>
-        <span class="l2">${escapeHtml(state.config.name).toUpperCase()}</span>
-        <span class="l3">${escapeHtml(state.config.tagline||'')}</span>
+        <span class="l1">${escapeHtml(state.config.heroLine1 || 'LOCAL FOOTBALL')}</span>
+        <span class="l2">${escapeHtml(state.config.heroLine2 || state.config.name || '')}</span>
+        <span class="l3">${escapeHtml(state.config.heroLine3 || '')}</span>
       </div>
       <div class="stat-chips">
         <div class="stat-chip"><div class="num">${teams.length}</div><div class="lbl">Teams</div></div>
@@ -698,7 +700,9 @@ function renderOrganizer(){
   const settingsPanel = el(`
     <div class="panel">
       <h3>Settings</h3>
-      <div class="field"><label>Tagline</label><input id="taglineInput" value="${escapeAttr(state.config.tagline||'')}" /></div>
+      <div class="field"><label>Hero line 1 (white, top)</label><input id="heroLine1Input" value="${escapeAttr(state.config.heroLine1||'')}" placeholder="e.g. LOCAL FOOTBALL" /></div>
+      <div class="field"><label>Hero line 2 (green, main)</label><input id="heroLine2Input" value="${escapeAttr(state.config.heroLine2||'')}" placeholder="e.g. AGARAM FOOTBALL TOURNAMENT" /></div>
+      <div class="field"><label>Hero line 3 (amber, tagline)</label><input id="heroLine3Input" value="${escapeAttr(state.config.heroLine3||'')}" placeholder="e.g. INTER SCHOOL FOOTBALL" /></div>
       <div class="field"><label>Date range (shown on Home)</label><input id="dateRangeInput" value="${escapeAttr(state.config.dateRange||'')}" placeholder="e.g. 27-28 Aug 2026" /></div>
       <div class="field"><label>Organizer passcode</label><input id="pwChange" value="${escapeAttr(state.config.passcode)}" /></div>
       <div class="btn-row">
@@ -709,7 +713,9 @@ function renderOrganizer(){
     </div>
   `);
   settingsPanel.querySelector('#saveSettingsBtn').addEventListener('click', async ()=>{
-    state.config.tagline = settingsPanel.querySelector('#taglineInput').value.trim();
+    state.config.heroLine1 = settingsPanel.querySelector('#heroLine1Input').value.trim();
+    state.config.heroLine2 = settingsPanel.querySelector('#heroLine2Input').value.trim();
+    state.config.heroLine3 = settingsPanel.querySelector('#heroLine3Input').value.trim();
     state.config.dateRange = settingsPanel.querySelector('#dateRangeInput').value.trim();
     const pw = settingsPanel.querySelector('#pwChange').value.trim();
     if(pw) state.config.passcode = pw;
