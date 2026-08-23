@@ -32,9 +32,9 @@
 
   /* ---------- TOP BAR ---------- */
   .topbar{
-    display:flex; align-items:center; justify-content:space-between;
+    display:flex; align-items:center; justify-content:center;
     padding:14px 18px; border-bottom:1px solid var(--border);
-    background:var(--bg); position:sticky; top:0; z-index:20; flex-wrap:wrap; gap:10px;
+    background:var(--bg); position:sticky; top:0; z-index:20; flex-wrap:wrap; gap:16px; position:relative;
   }
   .brand{display:flex; align-items:center; gap:10px;}
   .brand-logo{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green-dim));display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
@@ -45,12 +45,12 @@
   .cat-pill button{font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; letter-spacing:.05em; padding:6px 14px; background:transparent; color:var(--muted); border:none; cursor:pointer;}
   .cat-pill button.active{background:var(--green); color:#04140B;}
 
-  .topbar-right{display:flex; align-items:center; gap:10px;}
+  .topbar-right{display:flex; align-items:center; gap:10px; position:absolute; right:18px; top:50%; transform:translateY(-50%);}
   .org-toggle{font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; background:transparent; color:var(--muted); border:1px solid var(--border); padding:7px 12px; border-radius:20px; cursor:pointer; white-space:nowrap;}
   .org-toggle.active{background:var(--amber); color:#2B1B00; border-color:var(--amber); font-weight:700;}
 
   /* ---------- NAV ---------- */
-  .navbar{display:flex; gap:4px; padding:0 18px; background:var(--bg); border-bottom:1px solid var(--border); overflow-x:auto;}
+  .navbar{display:flex; gap:4px; padding:0 18px; background:var(--bg); border-bottom:1px solid var(--border); overflow-x:auto; justify-content:center;}
   .navlink{font-family:'Inter',sans-serif; font-weight:600; font-size:13px; letter-spacing:.02em; text-transform:uppercase; color:var(--muted); background:transparent; border:none; padding:12px 14px; cursor:pointer; white-space:nowrap; border-radius:6px 6px 0 0;}
   .navlink.active{background:var(--green); color:#04140B;}
   .navlink .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-right:6px;vertical-align:middle;animation:pulse 1.4s infinite;}
@@ -59,20 +59,32 @@
   main{padding:22px 18px 10px;}
 
   /* ---------- HOME HERO ---------- */
-  .hero{padding:34px 0 26px; border-bottom:1px solid var(--border); margin-bottom:30px; position:relative;}
-  .eyebrow{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--green); font-weight:700; margin:0 0 14px; display:flex; align-items:center; gap:8px;}
+  .hero{padding:34px 0 26px; border-bottom:1px solid var(--border); margin-bottom:30px; position:relative; text-align:center;}
+  .eyebrow{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--green); font-weight:700; margin:0 0 14px; display:flex; align-items:center; justify-content:center; gap:8px;}
   .eyebrow::after{content:"";width:30px;height:1px;background:var(--green);}
+  .eyebrow::before{content:"";width:30px;height:1px;background:var(--green);}
   .headline{font-family:'Playfair Display',serif; font-weight:800; font-size:clamp(30px,6vw,52px); line-height:1.08; margin:0 0 6px;}
   .headline .l1{color:var(--white); display:block;}
   .headline .l2{color:var(--green); display:block;}
   .headline .l3{color:var(--amber); display:block; font-size:0.62em; margin-top:4px;}
   .hero input.editable{border:none; background:transparent; outline:none; font:inherit; color:inherit; width:100%; padding:0;}
-  .stat-chips{display:flex; gap:12px; margin-top:22px; flex-wrap:wrap;}
+  .stat-chips{display:flex; gap:12px; margin-top:22px; flex-wrap:wrap; justify-content:center;}
   .stat-chip{background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px 18px; min-width:84px;}
   .stat-chip .num{font-family:'Playfair Display',serif; font-weight:800; font-size:26px; color:var(--green);}
   .stat-chip .lbl{font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:2px;}
 
-  .section-head{margin:36px 0 16px;}
+  .slideshow{position:relative; margin-top:26px; border-radius:10px; overflow:hidden; border:1px solid var(--border); height:260px; background:var(--panel);}
+  .slideshow img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .8s ease;}
+  .slideshow img.active{opacity:1;}
+  .slideshow-dots{position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:center; gap:6px;}
+  .slideshow-dots span{width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.35);}
+  .slideshow-dots span.active{background:var(--amber);}
+  .photo-chip{display:flex; align-items:center; gap:8px; background:var(--panel-alt); border:1px solid var(--border); border-radius:6px; padding:6px 8px; margin-bottom:6px; font-size:12px;}
+  .photo-chip img{width:36px; height:36px; object-fit:cover; border-radius:4px; flex-shrink:0;}
+  .photo-chip span{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
+  .photo-chip button{background:none; border:none; color:var(--red); cursor:pointer; font-size:15px; line-height:1;}
+
+  .section-head{margin:36px 0 16px; text-align:center;}
   .section-head .eyebrow{margin-bottom:8px;}
   .section-head h2{font-family:'Playfair Display',serif; font-weight:800; font-size:26px; margin:0; color:var(--white);}
 
@@ -152,7 +164,7 @@
 
   /* ---------- ORGANIZER ---------- */
   .panel{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; margin-bottom:16px;}
-  .panel h3{font-family:'Playfair Display',serif; font-size:17px; margin:0 0 14px; font-weight:800;}
+  .panel h3{font-family:'Playfair Display',serif; font-size:17px; margin:0 0 14px; font-weight:800; text-align:center;}
   .field{margin-bottom:10px;}
   .field label{display:block; font-size:11px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:5px;}
   .field input, .field select{width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:6px; font-size:14px; font-family:'Inter',sans-serif; background:var(--panel-alt); color:var(--white);}
@@ -210,6 +222,8 @@ let unlocked = false;
 let saving = false;
 let scheduleFilter = 'ALL';
 let resultsFilter = 'ALL';
+let slideIndex = 0;
+let slideTimer = null;
 
 function defaultState(){
   return {
@@ -221,7 +235,8 @@ function defaultState(){
       dateRange: '',
       passcode: '1234',
       nextMatchNumber: 1,
-      courtDesc: { 'Court A':'', 'Court B':'', 'Court C':'' }
+      courtDesc: { 'Court A':'', 'Court B':'', 'Court C':'' },
+      photos: []
     },
     teams: [],
     matches: []
@@ -235,6 +250,7 @@ async function loadState(){
     if(snap.exists()){ state = snap.val(); if(!state.config.courtDesc) state.config.courtDesc={'Court A':'','Court B':'','Court C':''}; }
     else { state = defaultState(); await persist(); }
   }catch(e){ console.error('load failed', e); state = defaultState(); }
+    if(state && !state.config.photos) state.config.photos = [];
   render();
   dataRef.on('value', (snap)=>{
     if(!snap.exists()) return;
@@ -377,9 +393,15 @@ function renderHome(){
         <div class="stat-chip"><div class="num">${matches.length}</div><div class="lbl">Matches</div></div>
         <div class="stat-chip"><div class="num">${liveCount}</div><div class="lbl">Live Now</div></div>
       </div>
+      ${(state.config.photos && state.config.photos.length) ? `
+      <div class="slideshow" id="heroSlideshow">
+        ${state.config.photos.map((url,i)=>`<img src="${escapeAttr(url)}" class="${i===0?'active':''}" />`).join('')}
+        <div class="slideshow-dots">${state.config.photos.map((_,i)=>`<span class="${i===0?'active':''}"></span>`).join('')}</div>
+      </div>` : ''}
     </div>
   `);
   wrap.appendChild(hero);
+  startSlideshow();
 
   wrap.appendChild(el(`<div class="section-head"><div class="eyebrow">VENUES</div><h2>Match Grounds</h2></div>`));
   const grid = el(`<div class="grounds-grid"></div>`);
@@ -408,6 +430,24 @@ function renderHome(){
     wrap.appendChild(cgrid);
   }
   return wrap;
+}
+
+function startSlideshow(){
+  if(slideTimer) clearInterval(slideTimer);
+  const photos = state.config.photos || [];
+  if(photos.length < 2) return;
+  slideIndex = 0;
+  slideTimer = setInterval(()=>{
+    const el2 = document.getElementById('heroSlideshow');
+    if(!el2 || !document.contains(el2)){ clearInterval(slideTimer); return; }
+    const imgs = el2.querySelectorAll('img');
+    const dots = el2.querySelectorAll('.slideshow-dots span');
+    imgs[slideIndex].classList.remove('active');
+    dots[slideIndex].classList.remove('active');
+    slideIndex = (slideIndex + 1) % imgs.length;
+    imgs[slideIndex].classList.add('active');
+    dots[slideIndex].classList.add('active');
+  }, 3500);
 }
 
 /* ---------------- MATCH ROW ---------------- */
@@ -696,6 +736,51 @@ function renderOrganizer(){
   if(sorted.length===0){ manageWrap.appendChild(el(`<p class="note">No matches yet.</p>`)); }
   else { sorted.forEach(m=> manageWrap.appendChild(fxRow(m,{withControls:true}))); }
   wrap.appendChild(manageWrap);
+
+  const groundsPanel = el(`
+    <div class="panel">
+      <h3>Match Grounds</h3>
+      <p class="note" style="margin-top:0;">These descriptions show under each court on the Home page.</p>
+    </div>
+  `);
+  COURTS.forEach(c=>{
+    const f = el(`<div class="field"><label>${c}</label><input value="${escapeAttr((state.config.courtDesc&&state.config.courtDesc[c])||'')}" placeholder="e.g. Opposite to main building." /></div>`);
+    f.querySelector('input').addEventListener('change', async (e)=>{
+      if(!state.config.courtDesc) state.config.courtDesc={};
+      state.config.courtDesc[c] = e.target.value;
+      await persist();
+    });
+    groundsPanel.appendChild(f);
+  });
+  wrap.appendChild(groundsPanel);
+
+  const photosPanel = el(`
+    <div class="panel">
+      <h3>Home Page Photo Slideshow</h3>
+      <p class="note" style="margin-top:0;">Paste a link to a photo already hosted online (e.g. from Google Photos "share" link, Imgur, or your school's site). Add a few and they'll auto-rotate on the Home page.</p>
+      <div id="photoList"></div>
+      <div class="field"><label>Photo URL</label><input id="newPhotoUrl" placeholder="https://..." /></div>
+      <button class="btn small" id="addPhotoBtn">+ Add photo</button>
+    </div>
+  `);
+  const photoListEl = photosPanel.querySelector('#photoList');
+  (state.config.photos||[]).forEach((url,i)=>{
+    const chip = el(`<div class="photo-chip"><img src="${escapeAttr(url)}" onerror="this.style.opacity=0.2" /><span>${escapeAttr(url)}</span><button title="remove">×</button></div>`);
+    chip.querySelector('button').addEventListener('click', async ()=>{
+      state.config.photos.splice(i,1);
+      await persist(); render();
+    });
+    photoListEl.appendChild(chip);
+  });
+  photosPanel.querySelector('#addPhotoBtn').addEventListener('click', async ()=>{
+    const input = photosPanel.querySelector('#newPhotoUrl');
+    const url = input.value.trim();
+    if(!url) return;
+    if(!state.config.photos) state.config.photos = [];
+    state.config.photos.push(url);
+    await persist(); render();
+  });
+  wrap.appendChild(photosPanel);
 
   const settingsPanel = el(`
     <div class="panel">
