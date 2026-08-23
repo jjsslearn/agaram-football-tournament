@@ -73,8 +73,8 @@
   .stat-chip .num{font-family:'Playfair Display',serif; font-weight:800; font-size:26px; color:var(--green);}
   .stat-chip .lbl{font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:2px;}
 
-  .slideshow{position:relative; margin-top:26px; border-radius:10px; overflow:hidden; border:1px solid var(--border); height:600px; background:var(--panel);}
-  .slideshow img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .8s ease;}
+  .slideshow{position:relative; margin-top:26px; border-radius:10px; overflow:hidden; border:1px solid var(--border); aspect-ratio:16/9; width:100%; background:#000;}
+  .slideshow img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:0; transition:opacity .8s ease;}
   .slideshow img.active{opacity:1;}
   .slideshow-dots{position:absolute; bottom:10px; left:0; right:0; display:flex; justify-content:center; gap:6px;}
   .slideshow-dots span{width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.35);}
@@ -327,8 +327,8 @@ function renderTopbar(){
   const wrap = el(`
     <div class="topbar">
       <div class="brand">
-        <div class="brand-logo">⚽</div>
-        <input class="brand-name" id="tname" value="${escapeAttr(state.config.name)}" ${orgMode?'':'readonly'} />
+        <div class="brand-logo">${state.config.logo && state.config.logo.startsWith('http') ? `<img src="${escapeAttr(state.config.logo)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />` : escapeHtml(state.config.logo || '⚽')}</div>
+        <span class="brand-name">${escapeHtml(state.config.name)}</span>
         <div class="cat-pill" id="catPill">
           ${CATEGORIES.map(c=>`<button class="${selectedCategory===c?'active':''}" data-cat="${c}">${c}</button>`).join('')}
         </div>
@@ -338,9 +338,6 @@ function renderTopbar(){
       </div>
     </div>
   `);
-  if(orgMode){
-    wrap.querySelector('#tname').addEventListener('change', async (e)=>{ state.config.name = e.target.value || 'My Local Tournament'; await persist(); });
-  }
   wrap.querySelector('#orgToggleBtn').addEventListener('click', ()=>{
     if(orgMode){ orgMode=false; activeTab = activeTab==='organizer' ? 'home' : activeTab; render(); }
     else { activeTab='organizer'; render(); }
@@ -785,6 +782,8 @@ function renderOrganizer(){
   const settingsPanel = el(`
     <div class="panel">
       <h3>Settings</h3>
+      <div class="field"><label>Tournament name</label><input id="nameInput" value="${escapeAttr(state.config.name||'')}" placeholder="e.g. Agaram Football Tournament" /></div>
+      <div class="field"><label>Logo (single emoji, or an image URL)</label><input id="logoInput" value="${escapeAttr(state.config.logo||'')}" placeholder="⚽ or https://..." /></div>
       <div class="field"><label>Hero line 1 (white, top)</label><input id="heroLine1Input" value="${escapeAttr(state.config.heroLine1||'')}" placeholder="e.g. LOCAL FOOTBALL" /></div>
       <div class="field"><label>Hero line 2 (green, main)</label><input id="heroLine2Input" value="${escapeAttr(state.config.heroLine2||'')}" placeholder="e.g. AGARAM FOOTBALL TOURNAMENT" /></div>
       <div class="field"><label>Hero line 3 (amber, tagline)</label><input id="heroLine3Input" value="${escapeAttr(state.config.heroLine3||'')}" placeholder="e.g. INTER SCHOOL FOOTBALL" /></div>
@@ -798,6 +797,8 @@ function renderOrganizer(){
     </div>
   `);
   settingsPanel.querySelector('#saveSettingsBtn').addEventListener('click', async ()=>{
+    state.config.name = settingsPanel.querySelector('#nameInput').value.trim() || 'My Local Tournament';
+    state.config.logo = settingsPanel.querySelector('#logoInput').value.trim();
     state.config.heroLine1 = settingsPanel.querySelector('#heroLine1Input').value.trim();
     state.config.heroLine2 = settingsPanel.querySelector('#heroLine2Input').value.trim();
     state.config.heroLine3 = settingsPanel.querySelector('#heroLine3Input').value.trim();
