@@ -181,7 +181,7 @@
   .team-chip{display:inline-flex; align-items:center; gap:6px; background:var(--panel-alt); border:1px solid var(--border); border-radius:20px; padding:5px 10px 5px 8px; font-size:12px; margin:0 6px 6px 0;}
   .team-chip button{background:none; border:none; color:var(--red); cursor:pointer; font-size:14px; line-height:1; padding:0;}
 
-  .live-control{background:var(--panel-alt); border:1px solid var(--border); border-radius:8px; padding:12px; margin-top:12px;}
+  .live-control{background:var(--panel-alt); border:2px solid #22D07A; border-radius:8px; padding:12px; margin-top:12px;}
   .goal-entry{display:flex; gap:6px; margin-bottom:6px;}
   .goal-entry input{flex:1; padding:8px 9px; border:1px solid var(--border); border-radius:6px; font-size:13px; background:var(--bg); color:var(--white);}
   .goal-entry-label{font-size:10px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; color:var(--muted); margin-bottom:3px; letter-spacing:.05em;}
@@ -826,7 +826,7 @@ function renderLiveControls(m){
   if(!m.advance) m.advance = {court:'', time:''};
   if(m.status==='scheduled' || m.status==='postponed'){
     const row = el(`<div class="btn-row"></div>`);
-    const startBtn = el(`<button class="btn small amber">Kick off</button>`);
+    const startBtn = el(`<button class="btn" style="background:#22D07A;color:#04140B;width:100%;padding:12px;font-size:13px;">▶ Kick off</button>`);
     startBtn.addEventListener('click', async ()=>{ m.status='live'; m.minute='1'; await persist(); render(); });
     row.appendChild(startBtn);
     const pp = el(`<button class="btn small secondary">${m.status==='postponed'?'Un-postpone':'Postpone'}</button>`);
