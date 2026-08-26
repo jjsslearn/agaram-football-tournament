@@ -819,6 +819,11 @@ function renderOrganizer(){
 
 function renderLiveControls(m){
   const wrap = el(`<div class="live-control"></div>`);
+  if(!m.status || (m.status!=='live' && m.status!=='finished' && m.status!=='postponed')){
+    m.status = 'scheduled';
+  }
+  if(!Array.isArray(m.goals)) m.goals = [];
+  if(!m.advance) m.advance = {court:'', time:''};
   if(m.status==='scheduled' || m.status==='postponed'){
     const row = el(`<div class="btn-row"></div>`);
     const startBtn = el(`<button class="btn small amber">Kick off</button>`);
