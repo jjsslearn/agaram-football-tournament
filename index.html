@@ -472,9 +472,9 @@ function fxRow(m, opts={}){
         <span class="fx-badge ${m.status}">${statusLabel(m)}</span>
       </div>
       <div class="fx-teams">
-        <div class="fx-team ${winner==='away'?'muted':''}"><span class="fx-dot" style="background:${teamColor(home)}"></span>${home? escapeHtml(home.name) : '—'}</div>
+        <div class="fx-team ${winner==='away'?'muted':''}"><span class="fx-dot" style="background:${teamColor(home)}"></span>${home? escapeHtml(home.name) : (m.home==='TBD' ? 'TBD' : '—')}</div>
         ${isLive||isFinished ? `<div class="fx-score">${m.homeScore}<span style="opacity:.4">&nbsp;-&nbsp;</span>${m.awayScore}</div>` : `<div class="fx-vs">VS</div>`}
-        <div class="fx-team right ${winner==='home'?'muted':''}">${away? escapeHtml(away.name) : '—'}<span class="fx-dot" style="background:${teamColor(away)}"></span></div>
+        <div class="fx-team right ${winner==='home'?'muted':''}">${away? escapeHtml(away.name) : (m.away==='TBD' ? 'TBD' : '—')}<span class="fx-dot" style="background:${teamColor(away)}"></span></div>
       </div>
       <div class="fx-meta-line">
         <span class="green">${escapeHtml(m.court||'')}</span>
@@ -485,9 +485,10 @@ function fxRow(m, opts={}){
         <div class="side">${m.goals.filter(g=>g.side==='home').map(g=>`⚽ <b>${escapeHtml(g.player)}</b>${g.minute? ' '+g.minute+"'":''}`).join('<br>')}</div>
         <div class="side right">${m.goals.filter(g=>g.side==='away').map(g=>`⚽ <b>${escapeHtml(g.player)}</b>${g.minute? ' '+g.minute+"'":''}`).join('<br>')}</div>
       </div>` : ''}
-      ${isFinished && m.advance && m.advance.court ? (()=>{
+      ${isFinished && m.advance && m.advance.targetMatchId ? (()=>{
         const wTeam = winner==='home'? home : winner==='away'? away : null;
-        return `<div class="advance-note">🏆 ${wTeam? escapeHtml(wTeam.name) : 'Winner'} advances → ${escapeHtml(m.advance.court)}${m.advance.time? ', '+m.advance.time:''}</div>`;
+        const target = (state.matches||[]).find(x=>x.id===m.advance.targetMatchId);
+        return `<div class="advance-note">🏆 ${wTeam? escapeHtml(wTeam.name) : 'Winner'} advances → ${target? 'Match '+target.number+' ('+escapeHtml(target.court||'')+(target.time? ', '+target.time:'')+')' : 'a later match'}</div>`;
       })() : ''}
       <div class="control-slot"></div>
     </div>
@@ -709,8 +710,8 @@ function renderOrganizer(){
       <h3>Schedule a match</h3>
       ${teamsForCat.length < 2 ? '<p class="note">Add at least two teams first.</p>' : `
       <div class="row2">
-        <div class="field"><label>Home team</label><select id="homeSel">${teamsForCat.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}</select></div>
-        <div class="field"><label>Away team</label><select id="awaySel">${teamsForCat.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}</select></div>
+        <div class="field"><label>Home team</label><select id="homeSel">${teamsForCat.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}<option value="TBD">TBD (winner fills in later)</option></select></div>
+        <div class="field"><label>Away team</label><select id="awaySel">${teamsForCat.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}<option value="TBD">TBD (winner fills in later)</option></select></div>
       </div>
       <div class="row3">
         <div class="field"><label>Court</label><select id="mCourt">${COURTS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
@@ -725,18 +726,73 @@ function renderOrganizer(){
     matchPanel.querySelector('#addMatchBtn').addEventListener('click', async ()=>{
       const home = matchPanel.querySelector('#homeSel').value;
       const away = matchPanel.querySelector('#awaySel').value;
-      if(home===away){ alert('Home and away team must be different.'); return; }
+      if(home===away && home!=='TBD'){ alert('Home and away team must be different.'); return; }
       const court = matchPanel.querySelector('#mCourt').value;
       const date = matchPanel.querySelector('#mDate').value;
       const time = matchPanel.querySelector('#mTime').value;
       const number = state.config.nextMatchNumber || 1;
       state.config.nextMatchNumber = number + 1;
       if(!Array.isArray(state.matches)) state.matches = [];
-      state.matches.push({ id: uid(), number, category: selectedCategory, home, away, court, date, time, status:'scheduled', homeScore:0, awayScore:0, minute:'', goals:[], advance:{court:'',time:''}, penaltyWinner:null });
+      state.matches.push({ id: uid(), number, category: selectedCategory, home, away, court, date, time, status:'scheduled', homeScore:0, awayScore:0, minute:'', goals:[], advance:{targetMatchId:'',slot:''}, penaltyWinner:null });
       await persist(); render();
     });
   }
   wrap.appendChild(matchPanel);
+
+  const bulkPanel = el(`
+    <div class="panel">
+      <h3>Bulk add fixtures</h3>
+      <p class="note" style="margin-top:0;">One match per line: <b>Home Team, Away Team, Court, Date, Time</b><br>
+      Court, Date and Time are optional. If a team name doesn't already exist, it'll be created automatically.<br>
+      Example:<br>
+      SSVM Mettupalayam, Navabharath National, Court A, 2026-08-27, 09:00<br>
+      GRD Public School, Bharatiya Vidya Bhavan, Court B, 2026-08-27, 10:00<br>
+      Sri Sakthi International, Camford International</p>
+      <div class="field"><label>Fixtures (one per line)</label>
+        <textarea id="bulkText" rows="6" style="width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:'JetBrains Mono',monospace; background:var(--panel-alt); color:var(--white); resize:vertical;" placeholder="Home Team, Away Team, Court, Date, Time"></textarea>
+      </div>
+      <button class="btn small" id="bulkAddBtn">+ Add all fixtures</button>
+    </div>
+  `);
+  bulkPanel.querySelector('#bulkAddBtn').addEventListener('click', async ()=>{
+    const text = bulkPanel.querySelector('#bulkText').value;
+    const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+    if(lines.length===0){ alert('Paste at least one fixture line first.'); return; }
+    if(!Array.isArray(state.teams)) state.teams = [];
+    if(!Array.isArray(state.matches)) state.matches = [];
+
+    const findOrCreateTeam = (name)=>{
+      const clean = name.trim();
+      if(clean.toUpperCase()==='TBD') return { id:'TBD', name:'TBD' };
+      let t = state.teams.find(x=> x.category===selectedCategory && x.name.toLowerCase()===clean.toLowerCase());
+      if(!t){
+        t = { id: uid(), name: clean, category: selectedCategory, color: COLORS[state.teams.length % COLORS.length] };
+        state.teams.push(t);
+      }
+      return t;
+    };
+
+    let added = 0, skipped = [];
+    lines.forEach((line, idx)=>{
+      const parts = line.split(',').map(s=>s.trim()).filter(p=>p.length>0);
+      if(parts.length < 2){ skipped.push(`Line ${idx+1}: need at least Home, Away`); return; }
+      const [homeName, awayName, courtRaw, date, time] = parts;
+      if(homeName.toLowerCase() === awayName.toLowerCase()){ skipped.push(`Line ${idx+1}: home and away are the same`); return; }
+      const home = findOrCreateTeam(homeName);
+      const away = findOrCreateTeam(awayName);
+      const court = COURTS.includes(courtRaw) ? courtRaw : COURTS[0];
+      const number = state.config.nextMatchNumber || 1;
+      state.config.nextMatchNumber = number + 1;
+      state.matches.push({ id: uid(), number, category: selectedCategory, home: home.id, away: away.id, court, date: date||'', time: time||'', status:'scheduled', homeScore:0, awayScore:0, minute:'', goals:[], advance:{targetMatchId:'',slot:''}, penaltyWinner:null });
+      added++;
+    });
+
+    await persist();
+    bulkPanel.querySelector('#bulkText').value = '';
+    render();
+    alert(`Added ${added} fixture${added!==1?'s':''}.${skipped.length ? '\n\nSkipped:\n'+skipped.join('\n') : ''}`);
+  });
+  wrap.appendChild(bulkPanel);
 
   const manageWrap = el(`<div class="panel"><h3>Manage ${selectedCategory} matches</h3></div>`);
   const sorted = sortMatches(catMatches());
@@ -833,7 +889,7 @@ function renderLiveControls(m){
     m.status = 'scheduled';
   }
   if(!Array.isArray(m.goals)) m.goals = [];
-  if(!m.advance) m.advance = {court:'', time:''};
+  if(!m.advance) m.advance = {targetMatchId:'', slot:''};
   if(m.status==='scheduled' || m.status==='postponed'){
     if(editingMatchId === m.id){
       const teamsForCat = catTeams();
@@ -941,18 +997,28 @@ function renderLiveControls(m){
       box.querySelector('#homeWonPen').addEventListener('click', async ()=>{ m.penaltyWinner='home'; await persist(); render(); });
       box.querySelector('#awayWonPen').addEventListener('click', async ()=>{ m.penaltyWinner='away'; await persist(); render(); });
     }
+    const otherMatches = catMatches().filter(x=>x.id!==m.id);
     const advBox = el(`
       <div style="margin-top:10px;">
         <div class="row2">
-          <div class="field" style="margin:0;"><label>Winner's next court</label><select id="advCourt"><option value="">—</option>${COURTS.map(c=>`<option value="${c}" ${m.advance&&m.advance.court===c?'selected':''}>${c}</option>`).join('')}</select></div>
-          <div class="field" style="margin:0;"><label>Time</label><input type="time" id="advTime" value="${m.advance&&m.advance.time?m.advance.time:''}" /></div>
+          <div class="field" style="margin:0;"><label>Winner plays next in</label><select id="advMatch"><option value="">— pick a match —</option>${otherMatches.map(x=>`<option value="${x.id}" ${m.advance&&m.advance.targetMatchId===x.id?'selected':''}>Match ${x.number} (${x.court}${x.time? ', '+x.time:''})</option>`).join('')}</select></div>
+          <div class="field" style="margin:0;"><label>As</label><select id="advSlot"><option value="home" ${m.advance&&m.advance.slot==='home'?'selected':''}>Home team</option><option value="away" ${m.advance&&m.advance.slot==='away'?'selected':''}>Away team</option></select></div>
         </div>
-        <button class="btn small" id="saveAdvBtn" style="margin-top:8px;">Save next match</button>
+        <p class="note" style="margin-top:4px;">Pick the match your winner plays next — it fills that slot automatically, replacing TBD.</p>
+        <button class="btn small" id="saveAdvBtn" style="margin-top:8px;">Save & advance winner</button>
         <button class="btn small secondary" id="reopenBtn" style="margin-top:8px;">Reopen match</button>
       </div>
     `);
     advBox.querySelector('#saveAdvBtn').addEventListener('click', async ()=>{
-      m.advance = { court: advBox.querySelector('#advCourt').value, time: advBox.querySelector('#advTime').value };
+      const targetId = advBox.querySelector('#advMatch').value;
+      const slot = advBox.querySelector('#advSlot').value;
+      if(!targetId){ alert('Pick which match the winner advances to.'); return; }
+      const w = getWinner(m);
+      if(!w){ alert('Decide the winner first (see above).'); return; }
+      const winnerTeamId = w==='home' ? m.home : m.away;
+      const target = (state.matches||[]).find(x=>x.id===targetId);
+      if(target){ target[slot] = winnerTeamId; }
+      m.advance = { targetMatchId: targetId, slot };
       await persist(); render();
     });
     advBox.querySelector('#reopenBtn').addEventListener('click', async ()=>{ m.status='live'; await persist(); render(); });
