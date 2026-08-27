@@ -250,16 +250,21 @@ async function loadState(){
     if(snap.exists()){ state = snap.val(); if(!state.config.courtDesc) state.config.courtDesc={'Court A':'','Court B':'','Court C':''}; }
     else { state = defaultState(); await persist(); }
   }catch(e){ console.error('load failed', e); state = defaultState(); }
+    if(!Array.isArray(state.matches)) state.matches = [];
+    if(!Array.isArray(state.teams)) state.teams = [];
     if(state && !state.config.photos) state.config.photos = [];
   render();
   dataRef.on('value', (snap)=>{
     if(!snap.exists()) return;
-    const incoming = JSON.stringify(snap.val());
+    const incoming = snap.val();
+    if(!Array.isArray(incoming.matches)) incoming.matches = [];
+    if(!Array.isArray(incoming.teams)) incoming.teams = [];
+    const incomingStr = JSON.stringify(incoming);
     const current = JSON.stringify(state);
-    if(incoming !== current){
+    if(incomingStr !== current){
       const active = document.activeElement;
       const isTyping = active && (active.tagName==='INPUT' || active.tagName==='SELECT');
-      if(!isTyping){ state = snap.val(); render(); }
+      if(!isTyping){ state = incoming; render(); }
     }
   });
 }
@@ -269,10 +274,10 @@ async function persist(){
   catch(e){ console.error('save failed', e); }
   saving = false;
 }
-function teamById(id){ return state.teams.find(t=>t.id===id); }
+function teamById(id){ return (state.teams||[]).find(t=>t.id===id); }
 function fmtDate(d){ if(!d) return ''; const dt = new Date(d+'T00:00:00'); return dt.toLocaleDateString(undefined,{month:'short', day:'numeric'}); }
-function catMatches(){ return state.matches.filter(m=>m.category===selectedCategory); }
-function catTeams(){ return state.teams.filter(t=>t.category===selectedCategory); }
+function catMatches(){ return (state.matches||[]).filter(m=>m.category===selectedCategory); }
+function catTeams(){ return (state.teams||[]).filter(t=>t.category===selectedCategory); }
 function sortMatches(list){ return [...list].sort((a,b)=>((a.date||'9999')+(a.time||'99:99')).localeCompare((b.date||'9999')+(b.time||'99:99'))); }
 function teamColor(t){ return t && t.color ? t.color : '#22D07A'; }
 function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstElementChild; }
@@ -679,6 +684,8 @@ function renderOrganizer(){
   catTeams().forEach(t=>{
     const chip = el(`<span class="team-chip"><span class="fx-dot" style="background:${teamColor(t)}"></span>${escapeHtml(t.name)} <button title="remove">×</button></span>`);
     chip.querySelector('button').addEventListener('click', async ()=>{
+      if(!Array.isArray(state.teams)) state.teams = [];
+      if(!Array.isArray(state.matches)) state.matches = [];
       state.teams = state.teams.filter(x=>x.id!==t.id);
       state.matches = state.matches.filter(m=>m.home!==t.id && m.away!==t.id);
       await persist(); render();
@@ -689,6 +696,7 @@ function renderOrganizer(){
     const nameInput = teamsPanel.querySelector('#newTeamName');
     const name = nameInput.value.trim();
     if(!name) return;
+    if(!Array.isArray(state.teams)) state.teams = [];
     state.teams.push({ id: uid(), name, category: selectedCategory, color: COLORS[state.teams.length % COLORS.length] });
     await persist(); render();
   });
@@ -722,6 +730,7 @@ function renderOrganizer(){
       const time = matchPanel.querySelector('#mTime').value;
       const number = state.config.nextMatchNumber || 1;
       state.config.nextMatchNumber = number + 1;
+      if(!Array.isArray(state.matches)) state.matches = [];
       state.matches.push({ id: uid(), number, category: selectedCategory, home, away, court, date, time, status:'scheduled', homeScore:0, awayScore:0, minute:'', goals:[], advance:{court:'',time:''}, penaltyWinner:null });
       await persist(); render();
     });
