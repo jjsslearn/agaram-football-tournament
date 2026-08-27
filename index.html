@@ -986,12 +986,14 @@ function renderLiveControls(m){
     const box = el(`<div></div>`);
     if(winner===null){
       box.appendChild(el(`
-        <div class="btn-row" style="margin-bottom:6px;">
-          <span class="note" style="margin:0;">Scores level — who advances?</span>
-        </div>
-        <div class="btn-row">
-          <button class="btn small secondary" id="homeWonPen">${teamById(m.home)? escapeHtml(teamById(m.home).name):'Home'} wins on pens</button>
-          <button class="btn small secondary" id="awayWonPen">${teamById(m.away)? escapeHtml(teamById(m.away).name):'Away'} wins on pens</button>
+        <div>
+          <div class="btn-row" style="margin-bottom:6px;">
+            <span class="note" style="margin:0;">Scores level — who advances?</span>
+          </div>
+          <div class="btn-row">
+            <button class="btn small secondary" id="homeWonPen">${teamById(m.home)? escapeHtml(teamById(m.home).name):'Home'} wins on pens</button>
+            <button class="btn small secondary" id="awayWonPen">${teamById(m.away)? escapeHtml(teamById(m.away).name):'Away'} wins on pens</button>
+          </div>
         </div>
       `));
       box.querySelector('#homeWonPen').addEventListener('click', async ()=>{ m.penaltyWinner='home'; await persist(); render(); });
