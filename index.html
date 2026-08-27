@@ -890,41 +890,43 @@ function renderLiveControls(m){
   }
   if(!Array.isArray(m.goals)) m.goals = [];
   if(!m.advance) m.advance = {targetMatchId:'', slot:''};
-  if(m.status==='scheduled' || m.status==='postponed'){
-    if(editingMatchId === m.id){
-      const teamsForCat = catTeams();
-      const editBox = el(`
-        <div>
-          <div class="row2">
-            <div class="field" style="margin:0;"><label>Home team</label><select id="editHomeSel">${teamsForCat.map(t=>`<option value="${t.id}" ${t.id===m.home?'selected':''}>${escapeHtml(t.name)}</option>`).join('')}</select></div>
-            <div class="field" style="margin:0;"><label>Away team</label><select id="editAwaySel">${teamsForCat.map(t=>`<option value="${t.id}" ${t.id===m.away?'selected':''}>${escapeHtml(t.name)}</option>`).join('')}</select></div>
-          </div>
-          <div class="row3" style="margin-top:8px;">
-            <div class="field" style="margin:0;"><label>Court</label><select id="editCourt">${COURTS.map(c=>`<option value="${c}" ${c===m.court?'selected':''}>${c}</option>`).join('')}</select></div>
-            <div class="field" style="margin:0;"><label>Date</label><input type="date" id="editDate" value="${escapeAttr(m.date||'')}" /></div>
-            <div class="field" style="margin:0;"><label>Time</label><input type="time" id="editTime" value="${escapeAttr(m.time||'')}" /></div>
-          </div>
-          <div class="btn-row">
-            <button class="btn small" id="saveEditBtn">Save changes</button>
-            <button class="btn small secondary" id="cancelEditBtn">Cancel</button>
-          </div>
+
+  if(editingMatchId === m.id){
+    const teamsForCat = catTeams();
+    const editBox = el(`
+      <div>
+        <div class="row2">
+          <div class="field" style="margin:0;"><label>Home team</label><select id="editHomeSel">${teamsForCat.map(t=>`<option value="${t.id}" ${t.id===m.home?'selected':''}>${escapeHtml(t.name)}</option>`).join('')}<option value="TBD" ${m.home==='TBD'?'selected':''}>TBD</option></select></div>
+          <div class="field" style="margin:0;"><label>Away team</label><select id="editAwaySel">${teamsForCat.map(t=>`<option value="${t.id}" ${t.id===m.away?'selected':''}>${escapeHtml(t.name)}</option>`).join('')}<option value="TBD" ${m.away==='TBD'?'selected':''}>TBD</option></select></div>
         </div>
-      `);
-      editBox.querySelector('#saveEditBtn').addEventListener('click', async ()=>{
-        const home = editBox.querySelector('#editHomeSel').value;
-        const away = editBox.querySelector('#editAwaySel').value;
-        if(home===away){ alert('Home and away team must be different.'); return; }
-        m.home = home; m.away = away;
-        m.court = editBox.querySelector('#editCourt').value;
-        m.date = editBox.querySelector('#editDate').value;
-        m.time = editBox.querySelector('#editTime').value;
-        editingMatchId = null;
-        await persist(); render();
-      });
-      editBox.querySelector('#cancelEditBtn').addEventListener('click', ()=>{ editingMatchId = null; render(); });
-      wrap.appendChild(editBox);
-      return wrap;
-    }
+        <div class="row3" style="margin-top:8px;">
+          <div class="field" style="margin:0;"><label>Court</label><select id="editCourt">${COURTS.map(c=>`<option value="${c}" ${c===m.court?'selected':''}>${c}</option>`).join('')}</select></div>
+          <div class="field" style="margin:0;"><label>Date</label><input type="date" id="editDate" value="${escapeAttr(m.date||'')}" /></div>
+          <div class="field" style="margin:0;"><label>Time</label><input type="time" id="editTime" value="${escapeAttr(m.time||'')}" /></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn small" id="saveEditBtn">Save changes</button>
+          <button class="btn small secondary" id="cancelEditBtn">Cancel</button>
+        </div>
+      </div>
+    `);
+    editBox.querySelector('#saveEditBtn').addEventListener('click', async ()=>{
+      const home = editBox.querySelector('#editHomeSel').value;
+      const away = editBox.querySelector('#editAwaySel').value;
+      if(home===away && home!=='TBD'){ alert('Home and away team must be different.'); return; }
+      m.home = home; m.away = away;
+      m.court = editBox.querySelector('#editCourt').value;
+      m.date = editBox.querySelector('#editDate').value;
+      m.time = editBox.querySelector('#editTime').value;
+      editingMatchId = null;
+      await persist(); render();
+    });
+    editBox.querySelector('#cancelEditBtn').addEventListener('click', ()=>{ editingMatchId = null; render(); });
+    wrap.appendChild(editBox);
+    return wrap;
+  }
+
+  if(m.status==='scheduled' || m.status==='postponed'){
     const row = el(`<div class="btn-row"></div>`);
     const startBtn = el(`<button class="btn" style="background:#22D07A;color:#04140B;width:100%;padding:12px;font-size:13px;">▶ Kick off</button>`);
     startBtn.addEventListener('click', async ()=>{ m.status='live'; m.minute='1'; await persist(); render(); });
@@ -978,6 +980,39 @@ function renderLiveControls(m){
     });
     box.querySelector('#minuteInput').addEventListener('change', async (e)=>{ m.minute = e.target.value; await persist(); });
     box.querySelector('#ftBtn').addEventListener('click', async ()=>{ m.status='finished'; await persist(); render(); });
+
+    if(m.goals.length > 0){
+      const goalsPanel = el(`<div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border);"><div class="goal-entry-label">Goals scored — tap to fix a name or remove</div></div>`);
+      m.goals.forEach((g, idx)=>{
+        const gRow = el(`
+          <div class="goal-entry">
+            <span style="font-size:11px; color:var(--muted); width:34px; flex-shrink:0;">${g.side==='home'?'HOME':'AWAY'}</span>
+            <input value="${escapeAttr(g.player)}" data-idx="${idx}" class="goalNameInput" />
+            <button class="btn small danger" data-idx="${idx}" title="Remove this goal">×</button>
+          </div>
+        `);
+        gRow.querySelector('.goalNameInput').addEventListener('change', async (e)=>{
+          m.goals[idx].player = e.target.value.trim() || 'Unknown';
+          await persist();
+        });
+        gRow.querySelector('button').addEventListener('click', async ()=>{
+          if(confirm('Remove this goal? The score will be adjusted.')){
+            const removed = m.goals[idx];
+            if(removed.side==='home') m.homeScore = Math.max(0, m.homeScore-1);
+            else m.awayScore = Math.max(0, m.awayScore-1);
+            m.goals.splice(idx,1);
+            await persist(); render();
+          }
+        });
+        goalsPanel.appendChild(gRow);
+      });
+      box.appendChild(goalsPanel);
+    }
+
+    const editRow = el(`<div class="btn-row" style="margin-top:10px;"><button class="btn small secondary" id="editMatchBtn">Edit match details</button></div>`);
+    editRow.querySelector('#editMatchBtn').addEventListener('click', ()=>{ editingMatchId = m.id; render(); });
+    box.appendChild(editRow);
+
     wrap.appendChild(box);
     return wrap;
   }
@@ -1009,6 +1044,7 @@ function renderLiveControls(m){
         <p class="note" style="margin-top:4px;">Pick the match your winner plays next — it fills that slot automatically, replacing TBD.</p>
         <button class="btn small" id="saveAdvBtn" style="margin-top:8px;">Save & advance winner</button>
         <button class="btn small secondary" id="reopenBtn" style="margin-top:8px;">Reopen match</button>
+        <button class="btn small secondary" id="editFinishedBtn" style="margin-top:8px;">Edit match details</button>
       </div>
     `);
     advBox.querySelector('#saveAdvBtn').addEventListener('click', async ()=>{
@@ -1024,6 +1060,7 @@ function renderLiveControls(m){
       await persist(); render();
     });
     advBox.querySelector('#reopenBtn').addEventListener('click', async ()=>{ m.status='live'; await persist(); render(); });
+    advBox.querySelector('#editFinishedBtn').addEventListener('click', ()=>{ editingMatchId = m.id; render(); });
     box.appendChild(advBox);
     wrap.appendChild(box);
   }
