@@ -489,6 +489,7 @@ function fxRow(m, opts={}){
         const wTeam = winner==='home'? home : winner==='away'? away : null;
         return `<div class="advance-note">🏆 ${wTeam? escapeHtml(wTeam.name) : 'Winner'} advances → ${escapeHtml(m.advance.court)}${m.advance.time? ', '+m.advance.time:''}</div>`;
       })() : ''}
+      <div style="font-family:monospace;font-size:10px;color:#EF4444;background:#1a0000;padding:4px 8px;margin-top:6px;border-radius:4px;">DEBUG: orgMode=${orgMode} withControls=${!!opts.withControls} status=${m.status}</div>
       <div class="control-slot"></div>
     </div>
   `);
