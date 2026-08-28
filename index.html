@@ -135,6 +135,17 @@
 
   .empty{text-align:center; padding:36px 16px; color:var(--muted); font-size:14px; border:1px dashed var(--border); border-radius:8px; background:var(--panel);}
 
+  /* ---------- BRACKET ---------- */
+  .bracket-wrap{overflow-x:auto; padding:10px 4px 20px;}
+  .bracket-columns{display:flex; gap:56px; position:relative; min-width:fit-content; padding:10px 30px;}
+  .bracket-col{display:flex; flex-direction:column; justify-content:space-around; gap:28px; min-width:190px;}
+  .bracket-match{background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:9px 11px; position:relative; z-index:1;}
+  .bracket-match .status{font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted-2); margin-bottom:5px;}
+  .bracket-team{display:flex; justify-content:space-between; align-items:center; padding:3px 0; gap:8px; font-size:12.5px; color:var(--muted);}
+  .bracket-team.winner{font-weight:700; color:var(--white);}
+  .bracket-score{font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--green); font-size:12px;}
+  svg.bracket-lines{position:absolute; top:0; left:0; z-index:0; pointer-events:none;}
+
   /* ---------- STATS ---------- */
   .stats-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
   @media(max-width:720px){.stats-grid{grid-template-columns:1fr;}}
@@ -323,6 +334,7 @@ function render(){
   else if(activeTab==='live') main.appendChild(renderLive());
   else if(activeTab==='schedule') main.appendChild(renderSchedule());
   else if(activeTab==='results') main.appendChild(renderResults());
+  else if(activeTab==='bracket') main.appendChild(renderBracket());
   else if(activeTab==='stats') main.appendChild(renderStats());
   else if(activeTab==='organizer') main.appendChild(renderOrganizer());
   app.appendChild(main);
@@ -361,6 +373,7 @@ function renderNav(){
     {id:'live', label: liveCount>0 ? `<span class="dot"></span>Live` : 'Live'},
     {id:'schedule', label:'Schedule'},
     {id:'results', label:'Results'},
+    {id:'bracket', label:'Bracket'},
     {id:'stats', label:'Stats'},
   ];
   const nav = el(`<div class="navbar"></div>`);
@@ -559,6 +572,89 @@ function renderResults(){
 }
 
 /* ---------------- STATS ---------------- */
+/* ---------------- STATS ---------------- */
+function computeBracketRounds(matches){
+  const round = {};
+  matches.forEach(m=> round[m.id]=1);
+  for(let pass=0; pass<15; pass++){
+    matches.forEach(m=>{
+      if(m.advance && m.advance.targetMatchId){
+        const target = matches.find(x=>x.id===m.advance.targetMatchId);
+        if(target && round[target.id] < round[m.id]+1) round[target.id] = round[m.id]+1;
+      }
+    });
+  }
+  return round;
+}
+
+function renderBracket(){
+  const wrap = document.createElement('div');
+  wrap.appendChild(el(`<div class="section-head"><div class="eyebrow">KNOCKOUT</div><h2>Bracket</h2></div>`));
+  const matches = catMatches();
+  if(matches.length===0){
+    wrap.appendChild(el(`<div class="empty">No ${selectedCategory} fixtures yet.<br>Once matches are linked with 'Winner plays next in', the bracket draws itself here.</div>`));
+    return wrap;
+  }
+  const roundMap = computeBracketRounds(matches);
+  const maxRound = Math.max(...Object.values(roundMap));
+  const outer = el(`<div class="bracket-wrap"><div class="bracket-columns" id="bracketColumns"></div></div>`);
+  const colsWrap = outer.querySelector('#bracketColumns');
+  colsWrap.style.position = 'relative';
+  for(let r=1; r<=maxRound; r++){
+    const colMatches = matches.filter(m=>roundMap[m.id]===r).sort((a,b)=>a.number-b.number);
+    const colEl = el(`<div class="bracket-col"></div>`);
+    colMatches.forEach(m=>{
+      const home = teamById(m.home), away = teamById(m.away);
+      const winner = m.status==='finished' ? getWinner(m) : null;
+      const homeLabel = home ? home.name : (m.home==='TBD' ? 'TBD' : '—');
+      const awayLabel = away ? away.name : (m.away==='TBD' ? 'TBD' : '—');
+      const showScore = m.status==='live' || m.status==='finished';
+      const card = el(`
+        <div class="bracket-match" data-match-id="${m.id}">
+          <div class="status">M${m.number} &middot; ${statusLabel(m)}</div>
+          <div class="bracket-team ${winner==='home'?'winner':''}"><span>${escapeHtml(homeLabel)}</span>${showScore?`<span class="bracket-score">${m.homeScore}</span>`:''}</div>
+          <div class="bracket-team ${winner==='away'?'winner':''}"><span>${escapeHtml(awayLabel)}</span>${showScore?`<span class="bracket-score">${m.awayScore}</span>`:''}</div>
+        </div>
+      `);
+      colEl.appendChild(card);
+    });
+    colsWrap.appendChild(colEl);
+  }
+  wrap.appendChild(outer);
+  setTimeout(()=> drawBracketConnectors(matches, colsWrap), 0);
+  return wrap;
+}
+
+function drawBracketConnectors(matches, container){
+  if(!document.contains(container)) return;
+  const old = container.querySelector('svg.bracket-lines');
+  if(old) old.remove();
+  const rect = container.getBoundingClientRect();
+  if(rect.width===0) return;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('class','bracket-lines');
+  svg.setAttribute('width', rect.width);
+  svg.setAttribute('height', rect.height);
+  container.insertBefore(svg, container.firstChild);
+  matches.forEach(m=>{
+    if(!(m.advance && m.advance.targetMatchId)) return;
+    const srcEl = container.querySelector(`[data-match-id="${m.id}"]`);
+    const tgtEl = container.querySelector(`[data-match-id="${m.advance.targetMatchId}"]`);
+    if(!srcEl || !tgtEl) return;
+    const s = srcEl.getBoundingClientRect(), t = tgtEl.getBoundingClientRect();
+    const x1 = s.right - rect.left, y1 = s.top + s.height/2 - rect.top;
+    const x2 = t.left - rect.left;
+    const y2 = (m.advance.slot==='away' ? t.top + t.height*0.75 : t.top + t.height*0.25) - rect.top;
+    const midX = (x1+x2)/2;
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
+    path.setAttribute('stroke', '#2A3346');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('fill', 'none');
+    svg.appendChild(path);
+  });
+}
+
 function renderStats(){
   const wrap = document.createElement('div');
   wrap.appendChild(el(`<div class="section-head"><div class="eyebrow">TOURNAMENT STATISTICS</div><h2>Stats & Standings</h2></div>`));
