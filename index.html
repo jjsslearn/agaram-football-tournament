@@ -481,7 +481,7 @@ function fxRow(m, opts={}){
   const card = el(`
     <div class="fx-row ${isLive?'is-live':''}">
       <div class="fx-top">
-        <span class="fx-code">M${String(m.number).padStart(2,'0')}</span>
+        <span class="fx-code">${matchCode(m)}</span>
         <span class="fx-badge ${m.status}">${statusLabel(m)}</span>
       </div>
       <div class="fx-teams">
@@ -501,7 +501,7 @@ function fxRow(m, opts={}){
       ${isFinished && m.advance && m.advance.targetMatchId ? (()=>{
         const wTeam = winner==='home'? home : winner==='away'? away : null;
         const target = (state.matches||[]).find(x=>x.id===m.advance.targetMatchId);
-        return `<div class="advance-note">🏆 ${wTeam? escapeHtml(wTeam.name) : 'Winner'} advances → ${target? 'Match '+target.number+' ('+escapeHtml(target.court||'')+(target.time? ', '+target.time:'')+')' : 'a later match'}</div>`;
+        return `<div class="advance-note">🏆 ${wTeam? escapeHtml(wTeam.name) : 'Winner'} advances → ${target? matchCode(target)+' ('+escapeHtml(target.court||'')+(target.time? ', '+target.time:'')+')' : 'a later match'}</div>`;
       })() : ''}
       <div class="control-slot"></div>
     </div>
@@ -587,6 +587,15 @@ function computeBracketRounds(matches){
   return round;
 }
 
+function matchCode(m){
+  const allMatches = catMatches();
+  const rounds = computeBracketRounds(allMatches);
+  const r = rounds[m.id] || 1;
+  const inRound = allMatches.filter(x=>(rounds[x.id]||1)===r).sort((a,b)=>a.number-b.number);
+  const idx = inRound.findIndex(x=>x.id===m.id) + 1;
+  return `${r}R${idx>0?idx:1}`;
+}
+
 function renderBracket(){
   const wrap = document.createElement('div');
   wrap.appendChild(el(`<div class="section-head"><div class="eyebrow">KNOCKOUT</div><h2>Bracket</h2></div>`));
@@ -611,7 +620,7 @@ function renderBracket(){
       const showScore = m.status==='live' || m.status==='finished';
       const card = el(`
         <div class="bracket-match" data-match-id="${m.id}">
-          <div class="status">M${m.number} &middot; ${statusLabel(m)}</div>
+          <div class="status">${matchCode(m)} &middot; ${statusLabel(m)}</div>
           <div class="bracket-team ${winner==='home'?'winner':''}"><span>${escapeHtml(homeLabel)}</span>${showScore?`<span class="bracket-score">${m.homeScore}</span>`:''}</div>
           <div class="bracket-team ${winner==='away'?'winner':''}"><span>${escapeHtml(awayLabel)}</span>${showScore?`<span class="bracket-score">${m.awayScore}</span>`:''}</div>
         </div>
@@ -902,15 +911,17 @@ function renderOrganizer(){
       <h3>Bracket Round Builder</h3>
       <p class="note" style="margin-top:0;">Build your knockout round by round. Each side of a new match can be either a team waiting for its next game (a bye) or the winner of an existing match — pick "Winner of Match #" and it'll auto-fill once that match finishes. Use this for Round 1 too: with no matches yet, only real teams show up as options.</p>
       <p class="note"><b>Teams waiting for a match (${unassignedTeams.length}):</b> ${unassignedTeams.length ? unassignedTeams.map(t=>escapeHtml(t.name)).join(', ') : 'None — every team is already placed in a match.'}</p>
-      <p class="note"><b>Matches not yet linked forward (${unlinkedMatches.length}):</b> ${unlinkedMatches.length ? unlinkedMatches.map(m=>'M'+m.number).join(', ') : 'None.'}</p>
+      <p class="note"><b>Matches not yet linked forward (${unlinkedMatches.length}):</b> ${unlinkedMatches.length ? unlinkedMatches.map(m=>matchCode(m)).join(', ') : 'None.'}</p>
       <div class="row2">
         <div class="field"><label>Home side</label><select id="rbHome"><option value="">— choose —</option>
+          <option value="tbd">TBD (I'll assign a team later)</option>
           ${unassignedTeams.map(t=>`<option value="team:${t.id}">${escapeHtml(t.name)} (bye)</option>`).join('')}
-          ${unlinkedMatches.map(m=>`<option value="match:${m.id}">Winner of Match ${m.number}</option>`).join('')}
+          ${unlinkedMatches.map(m=>`<option value="match:${m.id}">Winner of ${matchCode(m)}</option>`).join('')}
         </select></div>
         <div class="field"><label>Away side</label><select id="rbAway"><option value="">— choose —</option>
+          <option value="tbd">TBD (I'll assign a team later)</option>
           ${unassignedTeams.map(t=>`<option value="team:${t.id}">${escapeHtml(t.name)} (bye)</option>`).join('')}
-          ${unlinkedMatches.map(m=>`<option value="match:${m.id}">Winner of Match ${m.number}</option>`).join('')}
+          ${unlinkedMatches.map(m=>`<option value="match:${m.id}">Winner of ${matchCode(m)}</option>`).join('')}
         </select></div>
       </div>
       <div class="row3">
@@ -1090,7 +1101,7 @@ function renderLiveControls(m){
     row.appendChild(pp);
     const delBtn = el(`<button class="btn small danger">Delete</button>`);
     delBtn.addEventListener('click', async ()=>{
-      if(confirm(`Delete Match ${m.number}? This cannot be undone.`)){
+      if(confirm(`Delete ${matchCode(m)}? This cannot be undone.`)){
         state.matches = (state.matches||[]).filter(x=>x.id!==m.id);
         await persist(); render();
       }
@@ -1189,7 +1200,7 @@ function renderLiveControls(m){
     const advBox = el(`
       <div style="margin-top:10px;">
         <div class="row2">
-          <div class="field" style="margin:0;"><label>Winner plays next in</label><select id="advMatch"><option value="">— pick a match —</option>${otherMatches.map(x=>`<option value="${x.id}" ${m.advance&&m.advance.targetMatchId===x.id?'selected':''}>Match ${x.number} (${x.court}${x.time? ', '+x.time:''})</option>`).join('')}</select></div>
+          <div class="field" style="margin:0;"><label>Winner plays next in</label><select id="advMatch"><option value="">— pick a match —</option>${otherMatches.map(x=>`<option value="${x.id}" ${m.advance&&m.advance.targetMatchId===x.id?'selected':''}>${matchCode(x)} (${x.court}${x.time? ', '+x.time:''})</option>`).join('')}</select></div>
           <div class="field" style="margin:0;"><label>As</label><select id="advSlot"><option value="home" ${m.advance&&m.advance.slot==='home'?'selected':''}>Home team</option><option value="away" ${m.advance&&m.advance.slot==='away'?'selected':''}>Away team</option></select></div>
         </div>
         <p class="note" style="margin-top:4px;">Pick the match your winner plays next — it fills that slot automatically, replacing TBD.</p>
