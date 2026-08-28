@@ -890,6 +890,61 @@ function renderOrganizer(){
   });
   wrap.appendChild(bulkPanel);
 
+  const unassignedTeams = (()=> {
+    const usedIds = new Set();
+    (state.matches||[]).forEach(m=>{ if(m.home && m.home!=='TBD') usedIds.add(m.home); if(m.away && m.away!=='TBD') usedIds.add(m.away); });
+    return catTeams().filter(t=> !usedIds.has(t.id));
+  })();
+  const unlinkedMatches = catMatches().filter(m=> !(m.advance && m.advance.targetMatchId));
+
+  const rbPanel = el(`
+    <div class="panel">
+      <h3>Bracket Round Builder</h3>
+      <p class="note" style="margin-top:0;">Build your knockout round by round. Each side of a new match can be either a team waiting for its next game (a bye) or the winner of an existing match — pick "Winner of Match #" and it'll auto-fill once that match finishes. Use this for Round 1 too: with no matches yet, only real teams show up as options.</p>
+      <p class="note"><b>Teams waiting for a match (${unassignedTeams.length}):</b> ${unassignedTeams.length ? unassignedTeams.map(t=>escapeHtml(t.name)).join(', ') : 'None — every team is already placed in a match.'}</p>
+      <p class="note"><b>Matches not yet linked forward (${unlinkedMatches.length}):</b> ${unlinkedMatches.length ? unlinkedMatches.map(m=>'M'+m.number).join(', ') : 'None.'}</p>
+      <div class="row2">
+        <div class="field"><label>Home side</label><select id="rbHome"><option value="">— choose —</option>
+          ${unassignedTeams.map(t=>`<option value="team:${t.id}">${escapeHtml(t.name)} (bye)</option>`).join('')}
+          ${unlinkedMatches.map(m=>`<option value="match:${m.id}">Winner of Match ${m.number}</option>`).join('')}
+        </select></div>
+        <div class="field"><label>Away side</label><select id="rbAway"><option value="">— choose —</option>
+          ${unassignedTeams.map(t=>`<option value="team:${t.id}">${escapeHtml(t.name)} (bye)</option>`).join('')}
+          ${unlinkedMatches.map(m=>`<option value="match:${m.id}">Winner of Match ${m.number}</option>`).join('')}
+        </select></div>
+      </div>
+      <div class="row3">
+        <div class="field"><label>Court</label><select id="rbCourt">${COURTS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
+        <div class="field"><label>Date</label><input type="date" id="rbDate" /></div>
+        <div class="field"><label>Time</label><input type="time" id="rbTime" /></div>
+      </div>
+      <button class="btn small" id="rbAddBtn">+ Create this match</button>
+    </div>
+  `);
+  rbPanel.querySelector('#rbAddBtn').addEventListener('click', async ()=>{
+    const homeVal = rbPanel.querySelector('#rbHome').value;
+    const awayVal = rbPanel.querySelector('#rbAway').value;
+    if(!homeVal || !awayVal){ alert('Pick both a home side and an away side.'); return; }
+    if(homeVal === awayVal){ alert('Home and away can\'t be the exact same team or match.'); return; }
+    const court = rbPanel.querySelector('#rbCourt').value;
+    const date = rbPanel.querySelector('#rbDate').value;
+    const time = rbPanel.querySelector('#rbTime').value;
+    const number = state.config.nextMatchNumber || 1;
+    state.config.nextMatchNumber = number + 1;
+    let home = 'TBD', away = 'TBD', homeLinkId = null, awayLinkId = null;
+    if(homeVal.startsWith('team:')) home = homeVal.slice(5);
+    else homeLinkId = homeVal.slice(6);
+    if(awayVal.startsWith('team:')) away = awayVal.slice(5);
+    else awayLinkId = awayVal.slice(6);
+    if(!Array.isArray(state.matches)) state.matches = [];
+    const newMatch = { id: uid(), number, category: selectedCategory, home, away, court, date, time, status:'scheduled', homeScore:0, awayScore:0, minute:'', goals:[], advance:{targetMatchId:'',slot:''}, penaltyWinner:null };
+    state.matches.push(newMatch);
+    if(homeLinkId){ const src = state.matches.find(x=>x.id===homeLinkId); if(src) src.advance = {targetMatchId:newMatch.id, slot:'home'}; }
+    if(awayLinkId){ const src = state.matches.find(x=>x.id===awayLinkId); if(src) src.advance = {targetMatchId:newMatch.id, slot:'away'}; }
+    await persist(); render();
+  });
+  wrap.appendChild(rbPanel);
+
   const manageWrap = el(`<div class="panel"><h3>Manage ${selectedCategory} matches</h3></div>`);
   const sorted = sortMatches(catMatches());
   if(sorted.length===0){ manageWrap.appendChild(el(`<p class="note">No matches yet.</p>`)); }
