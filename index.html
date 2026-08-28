@@ -589,9 +589,10 @@ function computeBracketRounds(matches){
 
 function matchCode(m){
   const allMatches = catMatches();
-  const rounds = computeBracketRounds(allMatches);
-  const r = rounds[m.id] || 1;
-  const inRound = allMatches.filter(x=>(rounds[x.id]||1)===r).sort((a,b)=>a.number-b.number);
+  const computed = computeBracketRounds(allMatches);
+  const getRound = (x)=> x.round || computed[x.id] || 1;
+  const r = getRound(m);
+  const inRound = allMatches.filter(x=> getRound(x)===r).sort((a,b)=>a.number-b.number);
   const idx = inRound.findIndex(x=>x.id===m.id) + 1;
   return `${r}R${idx>0?idx:1}`;
 }
@@ -604,7 +605,9 @@ function renderBracket(){
     wrap.appendChild(el(`<div class="empty">No ${selectedCategory} fixtures yet.<br>Once matches are linked with 'Winner plays next in', the bracket draws itself here.</div>`));
     return wrap;
   }
-  const roundMap = computeBracketRounds(matches);
+  const computedRounds = computeBracketRounds(matches);
+  const roundMap = {};
+  matches.forEach(m=> roundMap[m.id] = m.round || computedRounds[m.id] || 1);
   const maxRound = Math.max(...Object.values(roundMap));
   const outer = el(`<div class="bracket-wrap"><div class="bracket-columns" id="bracketColumns"></div></div>`);
   const colsWrap = outer.querySelector('#bracketColumns');
@@ -912,6 +915,8 @@ function renderOrganizer(){
       <p class="note" style="margin-top:0;">Build your knockout round by round. Each side of a new match can be either a team waiting for its next game (a bye) or the winner of an existing match — pick "Winner of Match #" and it'll auto-fill once that match finishes. Use this for Round 1 too: with no matches yet, only real teams show up as options.</p>
       <p class="note"><b>Teams waiting for a match (${unassignedTeams.length}):</b> ${unassignedTeams.length ? unassignedTeams.map(t=>escapeHtml(t.name)).join(', ') : 'None — every team is already placed in a match.'}</p>
       <p class="note"><b>Matches not yet linked forward (${unlinkedMatches.length}):</b> ${unlinkedMatches.length ? unlinkedMatches.map(m=>matchCode(m)).join(', ') : 'None.'}</p>
+      <div class="field"><label>Round number</label><select id="rbRound">${[1,2,3,4,5,6,7,8].map(n=>`<option value="${n}">Round ${n}${n===1?' (first round)':''}</option>`).join('')}</select></div>
+      <p class="note" style="margin-top:0;">Set this explicitly — especially important for a bye team going straight into Round 2 or later, since the app can't guess that on its own.</p>
       <div class="row2">
         <div class="field"><label>Home side</label><select id="rbHome"><option value="">— choose —</option>
           <option value="tbd">TBD (I'll assign a team later)</option>
@@ -937,6 +942,7 @@ function renderOrganizer(){
     const awayVal = rbPanel.querySelector('#rbAway').value;
     if(!homeVal || !awayVal){ alert('Pick both a home side and an away side.'); return; }
     if(homeVal === awayVal){ alert('Home and away can\'t be the exact same team or match.'); return; }
+    const round = parseInt(rbPanel.querySelector('#rbRound').value, 10) || 1;
     const court = rbPanel.querySelector('#rbCourt').value;
     const date = rbPanel.querySelector('#rbDate').value;
     const time = rbPanel.querySelector('#rbTime').value;
@@ -948,7 +954,7 @@ function renderOrganizer(){
     if(awayVal.startsWith('team:')) away = awayVal.slice(5);
     else awayLinkId = awayVal.slice(6);
     if(!Array.isArray(state.matches)) state.matches = [];
-    const newMatch = { id: uid(), number, category: selectedCategory, home, away, court, date, time, status:'scheduled', homeScore:0, awayScore:0, minute:'', goals:[], advance:{targetMatchId:'',slot:''}, penaltyWinner:null };
+    const newMatch = { id: uid(), number, round, category: selectedCategory, home, away, court, date, time, status:'scheduled', homeScore:0, awayScore:0, minute:'', goals:[], advance:{targetMatchId:'',slot:''}, penaltyWinner:null };
     state.matches.push(newMatch);
     if(homeLinkId){ const src = state.matches.find(x=>x.id===homeLinkId); if(src) src.advance = {targetMatchId:newMatch.id, slot:'home'}; }
     if(awayLinkId){ const src = state.matches.find(x=>x.id===awayLinkId); if(src) src.advance = {targetMatchId:newMatch.id, slot:'away'}; }
@@ -1066,6 +1072,7 @@ function renderLiveControls(m){
           <div class="field" style="margin:0;"><label>Date</label><input type="date" id="editDate" value="${escapeAttr(m.date||'')}" /></div>
           <div class="field" style="margin:0;"><label>Time</label><input type="time" id="editTime" value="${escapeAttr(m.time||'')}" /></div>
         </div>
+        <div class="field" style="margin-top:8px;"><label>Round number</label><select id="editRound">${[1,2,3,4,5,6,7,8].map(n=>`<option value="${n}" ${(m.round||1)===n?'selected':''}>Round ${n}${n===1?' (first round)':''}</option>`).join('')}</select></div>
         <div class="btn-row">
           <button class="btn small" id="saveEditBtn">Save changes</button>
           <button class="btn small secondary" id="cancelEditBtn">Cancel</button>
@@ -1080,6 +1087,7 @@ function renderLiveControls(m){
       m.court = editBox.querySelector('#editCourt').value;
       m.date = editBox.querySelector('#editDate').value;
       m.time = editBox.querySelector('#editTime').value;
+      m.round = parseInt(editBox.querySelector('#editRound').value, 10) || 1;
       editingMatchId = null;
       await persist(); render();
     });
