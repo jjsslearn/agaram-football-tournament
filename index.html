@@ -588,6 +588,7 @@ function computeBracketRounds(matches){
 }
 
 function matchCode(m){
+  if(m.label && m.label.trim()) return m.label.trim();
   const allMatches = catMatches();
   const computed = computeBracketRounds(allMatches);
   const getRound = (x)=> x.round || computed[x.id] || 1;
@@ -922,7 +923,8 @@ function renderOrganizer(){
       <p class="note"><b>Teams waiting for a match (${unassignedTeams.length}):</b> ${unassignedTeams.length ? unassignedTeams.map(t=>escapeHtml(t.name)).join(', ') : 'None — every team is already placed in a match.'}</p>
       <p class="note"><b>Matches not yet linked forward (${unlinkedMatches.length}):</b> ${unlinkedMatches.length ? unlinkedMatches.map(m=>matchCode(m)).join(', ') : 'None.'}</p>
       <div class="field"><label>Round number</label><select id="rbRound">${[1,2,3,4,5,6,7,8].map(n=>`<option value="${n}">Round ${n}${n===1?' (first round)':''}</option>`).join('')}</select></div>
-      <p class="note" style="margin-top:0;">Set this explicitly — especially important for a bye team going straight into Round 2 or later, since the app can't guess that on its own.</p>
+      <div class="field"><label>Match label (you control this — won't shift if other matches are deleted)</label><input id="rbLabel" placeholder="e.g. 1R1" /></div>
+      <p class="note" style="margin-top:0;">Set the round explicitly — especially important for a bye team going straight into Round 2 or later. The label is suggested for you, but type whatever you want (e.g. 14R1) — it stays fixed permanently once created.</p>
       <div class="row2">
         <div class="field"><label>Home side</label><select id="rbHome"><option value="">— choose —</option>
           <option value="tbd">TBD (I'll assign a team later)</option>
@@ -943,12 +945,21 @@ function renderOrganizer(){
       <button class="btn small" id="rbAddBtn">+ Create this match</button>
     </div>
   `);
+  const suggestLabel = (round)=>{
+    const count = catMatches().filter(m=>(m.round||1)===round).length;
+    return `${round}R${count+1}`;
+  };
+  rbPanel.querySelector('#rbLabel').value = suggestLabel(1);
+  rbPanel.querySelector('#rbRound').addEventListener('change', (e)=>{
+    rbPanel.querySelector('#rbLabel').value = suggestLabel(parseInt(e.target.value,10) || 1);
+  });
   rbPanel.querySelector('#rbAddBtn').addEventListener('click', async ()=>{
     const homeVal = rbPanel.querySelector('#rbHome').value;
     const awayVal = rbPanel.querySelector('#rbAway').value;
     if(!homeVal || !awayVal){ alert('Pick both a home side and an away side.'); return; }
     if(homeVal === awayVal){ alert('Home and away can\'t be the exact same team or match.'); return; }
     const round = parseInt(rbPanel.querySelector('#rbRound').value, 10) || 1;
+    const label = rbPanel.querySelector('#rbLabel').value.trim() || suggestLabel(round);
     const court = rbPanel.querySelector('#rbCourt').value;
     const date = rbPanel.querySelector('#rbDate').value;
     const time = rbPanel.querySelector('#rbTime').value;
@@ -960,7 +971,7 @@ function renderOrganizer(){
     if(awayVal.startsWith('team:')) away = awayVal.slice(5);
     else awayLinkId = awayVal.slice(6);
     if(!Array.isArray(state.matches)) state.matches = [];
-    const newMatch = { id: uid(), number, round, category: selectedCategory, home, away, court, date, time, status:'scheduled', homeScore:0, awayScore:0, minute:'', goals:[], advance:{targetMatchId:'',slot:''}, penaltyWinner:null };
+    const newMatch = { id: uid(), number, round, label, category: selectedCategory, home, away, court, date, time, status:'scheduled', homeScore:0, awayScore:0, minute:'', goals:[], advance:{targetMatchId:'',slot:''}, penaltyWinner:null };
     state.matches.push(newMatch);
     if(homeLinkId){ const src = state.matches.find(x=>x.id===homeLinkId); if(src) src.advance = {targetMatchId:newMatch.id, slot:'home'}; }
     if(awayLinkId){ const src = state.matches.find(x=>x.id===awayLinkId); if(src) src.advance = {targetMatchId:newMatch.id, slot:'away'}; }
@@ -1079,6 +1090,7 @@ function renderLiveControls(m){
           <div class="field" style="margin:0;"><label>Time</label><input type="time" id="editTime" value="${escapeAttr(m.time||'')}" /></div>
         </div>
         <div class="field" style="margin-top:8px;"><label>Round number</label><select id="editRound">${[1,2,3,4,5,6,7,8].map(n=>`<option value="${n}" ${(m.round||1)===n?'selected':''}>Round ${n}${n===1?' (first round)':''}</option>`).join('')}</select></div>
+        <div class="field"><label>Match label (fixed, won't shift)</label><input id="editLabel" value="${escapeAttr(m.label||matchCode(m))}" placeholder="e.g. 1R1" /></div>
         <div class="btn-row">
           <button class="btn small" id="saveEditBtn">Save changes</button>
           <button class="btn small secondary" id="cancelEditBtn">Cancel</button>
@@ -1094,6 +1106,7 @@ function renderLiveControls(m){
       m.date = editBox.querySelector('#editDate').value;
       m.time = editBox.querySelector('#editTime').value;
       m.round = parseInt(editBox.querySelector('#editRound').value, 10) || 1;
+      m.label = editBox.querySelector('#editLabel').value.trim();
       editingMatchId = null;
       await persist(); render();
     });
