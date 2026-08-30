@@ -908,6 +908,12 @@ function renderOrganizer(){
     return catTeams().filter(t=> !usedIds.has(t.id));
   })();
   const unlinkedMatches = catMatches().filter(m=> !(m.advance && m.advance.targetMatchId));
+  const unlinkedByRound = {};
+  unlinkedMatches.forEach(m=>{
+    const r = m.round || 1;
+    if(!unlinkedByRound[r]) unlinkedByRound[r] = [];
+    unlinkedByRound[r].push(m);
+  });
 
   const rbPanel = el(`
     <div class="panel">
@@ -920,13 +926,13 @@ function renderOrganizer(){
       <div class="row2">
         <div class="field"><label>Home side</label><select id="rbHome"><option value="">— choose —</option>
           <option value="tbd">TBD (I'll assign a team later)</option>
-          ${unassignedTeams.map(t=>`<option value="team:${t.id}">${escapeHtml(t.name)} (bye)</option>`).join('')}
-          ${unlinkedMatches.map(m=>`<option value="match:${m.id}">Winner of ${matchCode(m)}</option>`).join('')}
+          ${unassignedTeams.length ? `<optgroup label="Bye teams waiting">${unassignedTeams.map(t=>`<option value="team:${t.id}">${escapeHtml(t.name)} (bye)</option>`).join('')}</optgroup>` : ''}
+          ${Object.keys(unlinkedByRound).sort((a,b)=>a-b).map(r=>`<optgroup label="Winner of Round ${r}">${unlinkedByRound[r].map(m=>`<option value="match:${m.id}">Winner of ${matchCode(m)}</option>`).join('')}</optgroup>`).join('')}
         </select></div>
         <div class="field"><label>Away side</label><select id="rbAway"><option value="">— choose —</option>
           <option value="tbd">TBD (I'll assign a team later)</option>
-          ${unassignedTeams.map(t=>`<option value="team:${t.id}">${escapeHtml(t.name)} (bye)</option>`).join('')}
-          ${unlinkedMatches.map(m=>`<option value="match:${m.id}">Winner of ${matchCode(m)}</option>`).join('')}
+          ${unassignedTeams.length ? `<optgroup label="Bye teams waiting">${unassignedTeams.map(t=>`<option value="team:${t.id}">${escapeHtml(t.name)} (bye)</option>`).join('')}</optgroup>` : ''}
+          ${Object.keys(unlinkedByRound).sort((a,b)=>a-b).map(r=>`<optgroup label="Winner of Round ${r}">${unlinkedByRound[r].map(m=>`<option value="match:${m.id}">Winner of ${matchCode(m)}</option>`).join('')}</optgroup>`).join('')}
         </select></div>
       </div>
       <div class="row3">
